@@ -1,7 +1,11 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Menu, X } from "lucide-react";
+
+import logo from '@/resources/logo.png'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +14,12 @@ const Navbar = () => {
     <nav className="g-gradient-to-r from-purple-300 to-purple-500 p-4 shadow-md w-full fixed top-0 left-0 z-50">
       <div className="container mx-auto flex justify-between items-center max-w-7xl px-4">
         {/* Logo */}
+        <Image src={logo} alt="logo"
+          className="rounded-lg" 
+          width={100} 
+          height={0}
+          priority
+          />
         <Link href="/" className=" text-2xl font-bold flex items-center">
         PAWSITIVE 🐾🏡
         </Link>
