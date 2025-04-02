@@ -7,7 +7,6 @@ from app.services.pet import PetService
 
 router = APIRouter(tags=["pets"])
 
-
 @router.post("", response_model=PetResponse, status_code=status.HTTP_201_CREATED)
 async def create_pet(
     pet_data: PetCreate,
@@ -15,7 +14,7 @@ async def create_pet(
 ) -> Any:
     """
     Create a new pet listing.
-    Any authenticated user can create pet listings.
+    Requires authentication.
     
     Args:
         pet_data: Pet data to create
@@ -38,7 +37,6 @@ async def create_pet(
             detail="An unexpected error occurred. Please try again later."
         )
 
-
 @router.get("", response_model=List[PetResponse])
 async def get_pets(
     pet_type_id: Optional[int] = Query(None, description="Filter by pet type"),
@@ -49,8 +47,7 @@ async def get_pets(
 ) -> Any:
     """
     Get a list of pets with optional filtering.
-    
-    This endpoint is publicly accessible and allows filtering pets by various criteria.
+    Publicly accessible.
     
     Args:
         pet_type_id: Optional filter by pet type
@@ -73,15 +70,13 @@ async def get_pets(
     pets = await PetService.get_pets(filters, limit, offset)
     return [pet.to_dict() for pet in pets]
 
-
 @router.get("/{pet_id}", response_model=PetResponse)
 async def get_pet(
     pet_id: str = Path(..., description="The ID of the pet to retrieve")
 ) -> Any:
     """
     Get a specific pet by ID.
-    
-    This endpoint is publicly accessible and retrieves detailed information about a specific pet.
+    Publicly accessible.
     
     Args:
         pet_id: ID of the pet to retrieve
@@ -100,7 +95,6 @@ async def get_pet(
         )
     return pet.to_dict()
 
-
 @router.put("/{pet_id}", response_model=PetResponse)
 async def update_pet(
     pet_data: PetUpdate,
@@ -109,8 +103,7 @@ async def update_pet(
 ) -> Any:
     """
     Update a pet listing.
-    
-    Users can only update their own pet listings, except for admins who can update any pet listing.
+    Users can only update their own pet listings.
     
     Args:
         pet_data: Updated pet data
@@ -131,8 +124,8 @@ async def update_pet(
             detail="Pet not found"
         )
     
-    # Check if user is owner or admin
-    if pet.owner_id != current_user["user_id"] and current_user["role"] != UserRole.ADMIN:
+    # Check if user is owner
+    if pet.owner_id != current_user["user_id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to update this pet listing"
@@ -148,7 +141,6 @@ async def update_pet(
     
     return updated_pet.to_dict()
 
-
 @router.delete("/{pet_id}", status_code=status.HTTP_200_OK)
 async def delete_pet(
     pet_id: str = Path(..., description="The ID of the pet to delete"),
@@ -156,8 +148,7 @@ async def delete_pet(
 ) -> Dict[str, str]:
     """
     Delete a pet listing.
-    
-    Users can only delete their own pet listings, except for admins who can delete any pet listing.
+    Users can only delete their own pet listings.
     
     Args:
         pet_id: ID of the pet to delete
@@ -177,8 +168,8 @@ async def delete_pet(
             detail="Pet not found"
         )
     
-    # Check if user is owner or admin
-    if pet.owner_id != current_user["user_id"] and current_user["role"] != UserRole.ADMIN:
+    # Check if user is owner
+    if pet.owner_id != current_user["user_id"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to delete this pet listing"

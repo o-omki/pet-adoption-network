@@ -33,6 +33,13 @@ async def create_adoption_application(
                 detail="Pet not found"
             )
         
+        # Don't allow applying for own pet
+        if pet.owner_id == current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot apply to adopt your own pet"
+            )
+        
         application = await AdoptionService.create_application(current_user["user_id"], application_data)
         return application.to_dict()
     except ValueError as e:
@@ -57,10 +64,9 @@ async def get_adoption_applications(
 ) -> Any:
     """
     Get a list of adoption applications.
-    
-    For adopters, this returns their own applications.
-    For pet owners, this returns applications for their pets.
-    For admins, this returns all applications.
+    Users can see:
+    - Applications they submitted
+    - Applications for pets they own
     
     Args:
         pet_id: Optional filter by pet ID
@@ -75,42 +81,49 @@ async def get_adoption_applications(
     filters = {}
     
     if pet_id:
-        filters["pet_id"] = pet_id
+        # If pet_id filter is provided, verify user owns the pet
+        pet = await PetService.get_pet_by_id(pet_id)
+        if not pet:
+            return []
+            
+        if pet.owner_id != current_user["user_id"]:
+            # If user doesn't own the pet, only show their own applications
+            filters["pet_id"] = pet_id
+            filters["adopter_id"] = current_user["user_id"]
+        else:
+            # If user owns the pet, show all applications for it
+            filters["pet_id"] = pet_id
+    else:
+        # No pet_id filter, show user's applications and applications for their pets
+        pets = await PetService.get_pets({"owner_id": current_user["user_id"]})
+        pet_ids = [pet.pet_id for pet in pets]
+        
+        if not pet_ids:
+            # User has no pets, just show their applications
+            filters["adopter_id"] = current_user["user_id"]
+        else:
+            # Show both user's applications and applications for their pets
+            applications = []
+            # Get applications where user is the adopter
+            adopter_filters = {"adopter_id": current_user["user_id"]}
+            if status:
+                adopter_filters["status"] = status
+            adopter_apps = await AdoptionService.get_applications(adopter_filters, limit, offset)
+            applications.extend(adopter_apps)
+            
+            # Get applications for user's pets
+            for pet_id in pet_ids:
+                pet_filters = {"pet_id": pet_id}
+                if status:
+                    pet_filters["status"] = status
+                pet_apps = await AdoptionService.get_applications(pet_filters, limit, offset)
+                applications.extend(pet_apps)
+            
+            return [app.to_dict() for app in applications[:limit]]
     
     if status:
         filters["status"] = status
     
-    if current_user["role"] == UserRole.ADOPTER:
-        # Adopters can only see their own applications
-        filters["adopter_id"] = current_user["user_id"]
-    elif current_user["role"] == UserRole.SHELTER or current_user["role"] == UserRole.INDIVIDUAL:
-        # Get the user's pets to filter applications for
-        pets = await PetService.get_pets({"owner_id": current_user["user_id"]})
-        if not pets:
-            return []  # User has no pets, so return empty list
-        
-        # If pet_id was specified in filters, verify it belongs to the user
-        if "pet_id" in filters:
-            is_owner = any(pet.pet_id == filters["pet_id"] for pet in pets)
-            if not is_owner:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have permission to view applications for this pet"
-                )
-        else:
-            # No specific pet_id was provided, so show applications for all user's pets
-            # We can't do this easily with a single filter, so we'll get all applications
-            # and filter in code (this is inefficient but works for demo purposes)
-            pet_ids = [pet.pet_id for pet in pets]
-            applications = []
-            for pet_id in pet_ids:
-                pet_filters = filters.copy()
-                pet_filters["pet_id"] = pet_id
-                pet_applications = await AdoptionService.get_applications(pet_filters, limit, offset)
-                applications.extend(pet_applications)
-            return [app.to_dict() for app in applications[:limit]]
-    
-    # For admins or the filtered case of pets owners
     applications = await AdoptionService.get_applications(filters, limit, offset)
     return [app.to_dict() for app in applications]
 
@@ -122,9 +135,9 @@ async def get_adoption_application(
 ) -> Any:
     """
     Get a specific adoption application by ID.
-    
-    Users can only view applications they submitted or that were submitted for their pets.
-    Admins can view any application.
+    Users can only view:
+    - Applications they submitted
+    - Applications for pets they own
     
     Args:
         application_id: ID of the application to retrieve
@@ -132,9 +145,6 @@ async def get_adoption_application(
         
     Returns:
         AdoptionApplicationResponse: Application details
-        
-    Raises:
-        HTTPException: If application is not found or user doesn't have permission
     """
     application = await AdoptionService.get_application_by_id(application_id)
     if not application:
@@ -144,12 +154,8 @@ async def get_adoption_application(
         )
     
     # Check if user has permission to view this application
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can view any application
-    elif current_user["role"] == UserRole.ADOPTER and current_user["user_id"] == application.adopter_id:
-        pass  # Adopters can view their own applications
-    else:
-        # For shelter/individual users, check if they own the pet
+    if current_user["user_id"] != application.adopter_id:
+        # If user is not the adopter, check if they own the pet
         pet = await PetService.get_pet_by_id(application.pet_id)
         if not pet or pet.owner_id != current_user["user_id"]:
             raise HTTPException(
@@ -168,9 +174,7 @@ async def update_adoption_application(
 ) -> Any:
     """
     Update the status of an adoption application.
-    
-    Pet owners can update applications for their pets.
-    Admins can update any application.
+    Only the pet owner can update application status.
     
     Args:
         update_data: Updated status for the application
@@ -179,9 +183,6 @@ async def update_adoption_application(
         
     Returns:
         AdoptionApplicationResponse: Updated application details
-        
-    Raises:
-        HTTPException: If update fails or user doesn't have permission
     """
     # Get the application to check permissions
     application = await AdoptionService.get_application_by_id(application_id)
@@ -191,17 +192,13 @@ async def update_adoption_application(
             detail="Adoption application not found"
         )
     
-    # Check if user has permission to update this application
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can update any application
-    else:
-        # For shelter/individual users, check if they own the pet
-        pet = await PetService.get_pet_by_id(application.pet_id)
-        if not pet or pet.owner_id != current_user["user_id"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to update this application"
-            )
+    # Check if user owns the pet
+    pet = await PetService.get_pet_by_id(application.pet_id)
+    if not pet or pet.owner_id != current_user["user_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this application"
+        )
     
     # Update the application
     updated_application = await AdoptionService.update_application_status(application_id, update_data)
@@ -213,7 +210,6 @@ async def update_adoption_application(
     
     # If application was approved, update pet status
     if update_data.status == "approved":
-        # Update pet status to "adopted"
         await PetService.update_pet(
             pet_id=application.pet_id,
             update_data={
@@ -231,10 +227,9 @@ async def delete_adoption_application(
 ) -> Dict[str, str]:
     """
     Delete an adoption application.
-    
-    Adopters can delete their own applications.
-    Pet owners can delete applications for their pets.
-    Admins can delete any application.
+    Users can only delete:
+    - Their own applications
+    - Applications for pets they own
     
     Args:
         application_id: ID of the application to delete
@@ -242,9 +237,6 @@ async def delete_adoption_application(
         
     Returns:
         Dict: Success message
-        
-    Raises:
-        HTTPException: If deletion fails or user doesn't have permission
     """
     # Get the application to check permissions
     application = await AdoptionService.get_application_by_id(application_id)
@@ -255,12 +247,8 @@ async def delete_adoption_application(
         )
     
     # Check if user has permission to delete this application
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can delete any application
-    elif current_user["role"] == UserRole.ADOPTER and current_user["user_id"] == application.adopter_id:
-        pass  # Adopters can delete their own applications
-    else:
-        # For shelter/individual users, check if they own the pet
+    if current_user["user_id"] != application.adopter_id:
+        # If user is not the adopter, check if they own the pet
         pet = await PetService.get_pet_by_id(application.pet_id)
         if not pet or pet.owner_id != current_user["user_id"]:
             raise HTTPException(

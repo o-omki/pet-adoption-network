@@ -1,15 +1,5 @@
-from enum import Enum
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from datetime import datetime
-
-
-class UserRole(str, Enum):
-    """Enum for user roles in the system."""
-    ADOPTER = "adopter"
-    INDIVIDUAL = "individual"
-    SHELTER = "shelter"
-    ADMIN = "admin"
-
 
 class User:
     """User model representing a user in the system."""
@@ -19,7 +9,6 @@ class User:
         user_id: str,
         username: str,
         email: str,
-        role: UserRole,
         created_at: datetime,
         is_active: bool = True,
         full_name: Optional[str] = None,
@@ -30,7 +19,6 @@ class User:
         self.user_id = user_id
         self.username = username
         self.email = email
-        self.role = role
         self.created_at = created_at
         self.is_active = is_active
         self.full_name = full_name
@@ -56,7 +44,6 @@ class User:
             user_id=supabase_user.get("id"),
             username=user_metadata.get("username", ""),
             email=supabase_user.get("email", ""),
-            role=user_metadata.get("role", UserRole.ADOPTER),
             created_at=datetime.fromisoformat(supabase_user.get("created_at").replace("Z", "+00:00")),
             is_active=supabase_user.get("confirmed_at") is not None,
             full_name=user_metadata.get("full_name"),
@@ -76,7 +63,6 @@ class User:
             "user_id": self.user_id,
             "username": self.username,
             "email": self.email,
-            "role": self.role,
             "created_at": self.created_at.isoformat(),
             "is_active": self.is_active,
             "full_name": self.full_name,

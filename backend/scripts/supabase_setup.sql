@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255),
-  role VARCHAR(20) NOT NULL CHECK (role IN ('adopter', 'individual', 'shelter', 'admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -46,7 +45,6 @@ CREATE TABLE IF NOT EXISTS breeds (
 CREATE TABLE IF NOT EXISTS pets (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  owner_type VARCHAR(20) NOT NULL CHECK (owner_type IN ('individual', 'shelter')),
   name VARCHAR(100) NOT NULL,
   species VARCHAR(50) NOT NULL,
   breed VARCHAR(100),
@@ -137,10 +135,12 @@ CREATE POLICY applications_select_policy ON adoption_applications FOR SELECT USI
 );
 CREATE POLICY applications_insert_policy ON adoption_applications FOR INSERT WITH CHECK (auth.uid()::uuid = adopter_id);
 CREATE POLICY applications_update_policy ON adoption_applications FOR UPDATE USING (
+  auth.uid()::uuid IN (SELECT owner_id FROM pets WHERE id = pet_id)
+);
+CREATE POLICY applications_delete_policy ON adoption_applications FOR DELETE USING (
   auth.uid()::uuid = adopter_id OR 
   auth.uid()::uuid IN (SELECT owner_id FROM pets WHERE id = pet_id)
 );
-CREATE POLICY applications_delete_policy ON adoption_applications FOR DELETE USING (auth.uid()::uuid = adopter_id);
 
 -- Visit Schedules RLS
 ALTER TABLE visit_schedules ENABLE ROW LEVEL SECURITY;

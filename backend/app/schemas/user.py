@@ -1,16 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field, validator
-from typing import Optional, Dict, Any, List
-from enum import Enum
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Dict, Any
 from datetime import datetime
-
-
-class UserRole(str, Enum):
-    """Enum for user roles in the system."""
-    ADOPTER = "adopter"
-    INDIVIDUAL = "individual"
-    SHELTER = "shelter"
-    ADMIN = "admin"
-
 
 class UserBase(BaseModel):
     """Base user schema with common fields."""
@@ -25,11 +15,9 @@ class UserBase(BaseModel):
             }
         }
 
-
 class UserCreate(UserBase):
     """Schema for user registration."""
     password: str = Field(..., min_length=8)
-    role: UserRole = Field(default=UserRole.ADOPTER)
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
     address: Optional[str] = None
@@ -41,7 +29,6 @@ class UserCreate(UserBase):
                 "username": "johndoe",
                 "email": "john@example.com",
                 "password": "securepassword",
-                "role": "adopter",
                 "full_name": "John Doe",
                 "phone_number": "+1234567890",
                 "address": "123 Main St, New York, NY 10001",
@@ -50,7 +37,6 @@ class UserCreate(UserBase):
                 }
             }
         }
-
 
 class UserLogin(BaseModel):
     """Schema for user login."""
@@ -64,7 +50,6 @@ class UserLogin(BaseModel):
                 "password": "securepassword"
             }
         }
-
 
 class UserUpdate(BaseModel):
     """Schema for updating user information."""
@@ -87,11 +72,9 @@ class UserUpdate(BaseModel):
             }
         }
 
-
 class UserResponse(UserBase):
     """Schema for user response data."""
     user_id: str
-    role: UserRole
     created_at: datetime
     is_active: bool
     full_name: Optional[str] = None
@@ -105,7 +88,6 @@ class UserResponse(UserBase):
                 "user_id": "123e4567-e89b-12d3-a456-426614174000",
                 "username": "johndoe",
                 "email": "john@example.com",
-                "role": "adopter",
                 "created_at": "2023-01-01T00:00:00",
                 "is_active": True,
                 "full_name": "John Doe",
@@ -116,7 +98,6 @@ class UserResponse(UserBase):
                 }
             }
         }
-
 
 class Token(BaseModel):
     """Schema for authentication token response."""
@@ -131,9 +112,7 @@ class Token(BaseModel):
             }
         }
 
-
 class TokenData(BaseModel):
     """Schema for decoded token data."""
     user_id: Optional[str] = None
     email: Optional[str] = None
-    role: Optional[UserRole] = None

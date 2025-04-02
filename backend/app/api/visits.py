@@ -33,6 +33,13 @@ async def create_visit_schedule(
                 detail="Pet not found"
             )
         
+        # Don't allow scheduling visits for own pet
+        if pet.owner_id == current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot schedule a visit for your own pet"
+            )
+        
         # Create the visit schedule
         visit = await VisitService.create_visit(current_user["user_id"], visit_data)
         return visit.to_dict()
@@ -58,10 +65,9 @@ async def get_visit_schedules(
 ) -> Any:
     """
     Get a list of visit schedules.
-    
-    For adopters, this returns their own visit schedules.
-    For pet owners, this returns visit schedules for their pets.
-    For admins, this returns all visit schedules.
+    Users can see:
+    - Visits they scheduled
+    - Visits for pets they own
     
     Args:
         pet_id: Optional filter by pet ID
@@ -75,46 +81,50 @@ async def get_visit_schedules(
     """
     filters = {}
     
-    # Apply pet_id filter if provided
     if pet_id:
-        filters["pet_id"] = pet_id
+        # If pet_id filter is provided, verify user owns the pet
+        pet = await PetService.get_pet_by_id(pet_id)
+        if not pet:
+            return []
+            
+        if pet.owner_id != current_user["user_id"]:
+            # If user doesn't own the pet, only show their own visits
+            filters["pet_id"] = pet_id
+            filters["adopter_id"] = current_user["user_id"]
+        else:
+            # If user owns the pet, show all visits for it
+            filters["pet_id"] = pet_id
+    else:
+        # No pet_id filter, show user's visits and visits for their pets
+        pets = await PetService.get_pets({"owner_id": current_user["user_id"]})
+        pet_ids = [pet.pet_id for pet in pets]
+        
+        if not pet_ids:
+            # User has no pets, just show their visits
+            filters["adopter_id"] = current_user["user_id"]
+        else:
+            # Show both user's visits and visits for their pets
+            visits = []
+            # Get visits where user is the visitor
+            visitor_filters = {"adopter_id": current_user["user_id"]}
+            if status:
+                visitor_filters["status"] = status
+            visitor_visits = await VisitService.get_visits(visitor_filters, limit, offset)
+            visits.extend(visitor_visits)
+            
+            # Get visits for user's pets
+            for pet_id in pet_ids:
+                pet_filters = {"pet_id": pet_id}
+                if status:
+                    pet_filters["status"] = status
+                pet_visits = await VisitService.get_visits(pet_filters, limit, offset)
+                visits.extend(pet_visits)
+            
+            return [visit.to_dict() for visit in visits[:limit]]
     
-    # Apply status filter if provided
     if status:
         filters["status"] = status
     
-    # Apply role-based filters
-    if current_user["role"] == UserRole.ADOPTER:
-        # Adopters can only see their own visit schedules
-        filters["adopter_id"] = current_user["user_id"]
-    elif current_user["role"] == UserRole.SHELTER or current_user["role"] == UserRole.INDIVIDUAL:
-        # Get the user's pets to filter visit schedules for
-        pets = await PetService.get_pets({"owner_id": current_user["user_id"]})
-        if not pets:
-            return []  # User has no pets, so return empty list
-        
-        # If pet_id was specified in filters, verify it belongs to the user
-        if "pet_id" in filters:
-            is_owner = any(pet.pet_id == filters["pet_id"] for pet in pets)
-            if not is_owner:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have permission to view visit schedules for this pet"
-                )
-        else:
-            # No specific pet_id was provided, so show visit schedules for all user's pets
-            # We can't do this easily with a single filter, so we'll get all visits
-            # and filter in code (this is inefficient but works for demo purposes)
-            pet_ids = [pet.pet_id for pet in pets]
-            visits = []
-            for pet_id in pet_ids:
-                pet_filters = filters.copy()
-                pet_filters["pet_id"] = pet_id
-                pet_visits = await VisitService.get_visits(pet_filters, limit, offset)
-                visits.extend(pet_visits)
-            return [visit.to_dict() for visit in visits[:limit]]
-    
-    # For admins or the filtered case of pets owners
     visits = await VisitService.get_visits(filters, limit, offset)
     return [visit.to_dict() for visit in visits]
 
@@ -126,9 +136,9 @@ async def get_visit_schedule(
 ) -> Any:
     """
     Get a specific visit schedule by ID.
-    
-    Users can only view visit schedules they submitted or that were submitted for their pets.
-    Admins can view any visit schedule.
+    Users can only view:
+    - Visits they scheduled
+    - Visits for pets they own
     
     Args:
         visit_id: ID of the visit schedule to retrieve
@@ -136,9 +146,6 @@ async def get_visit_schedule(
         
     Returns:
         VisitScheduleResponse: Visit schedule details
-        
-    Raises:
-        HTTPException: If visit schedule is not found or user doesn't have permission
     """
     visit = await VisitService.get_visit_by_id(visit_id)
     if not visit:
@@ -148,12 +155,8 @@ async def get_visit_schedule(
         )
     
     # Check if user has permission to view this visit schedule
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can view any visit schedule
-    elif current_user["role"] == UserRole.ADOPTER and current_user["user_id"] == visit.adopter_id:
-        pass  # Adopters can view their own visit schedules
-    else:
-        # For shelter/individual users, check if they own the pet
+    if current_user["user_id"] != visit.adopter_id:
+        # If user is not the visitor, check if they own the pet
         pet = await PetService.get_pet_by_id(visit.pet_id)
         if not pet or pet.owner_id != current_user["user_id"]:
             raise HTTPException(
@@ -172,10 +175,8 @@ async def update_visit_schedule(
 ) -> Any:
     """
     Update the status of a visit schedule.
-    
-    Pet owners can update visit schedules for their pets (confirm, complete).
-    Adopters can update their own visit schedules (cancel).
-    Admins can update any visit schedule.
+    - Pet owners can update visit status to any state
+    - Visitors can only cancel their own visits
     
     Args:
         update_data: Updated status for the visit schedule
@@ -184,9 +185,6 @@ async def update_visit_schedule(
         
     Returns:
         VisitScheduleResponse: Updated visit schedule details
-        
-    Raises:
-        HTTPException: If update fails or user doesn't have permission
     """
     # Get the visit schedule to check permissions
     visit = await VisitService.get_visit_by_id(visit_id)
@@ -196,24 +194,30 @@ async def update_visit_schedule(
             detail="Visit schedule not found"
         )
     
-    # Check if user has permission to update this visit schedule
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can update any visit schedule
-    elif current_user["role"] == UserRole.ADOPTER and current_user["user_id"] == visit.adopter_id:
-        # Adopters can only cancel their own visit schedules
+    # Get the pet to check ownership
+    pet = await PetService.get_pet_by_id(visit.pet_id)
+    if not pet:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pet not found"
+        )
+    
+    # Check permissions
+    if pet.owner_id == current_user["user_id"]:
+        # Pet owner can update to any status
+        pass
+    elif visit.adopter_id == current_user["user_id"]:
+        # Visitor can only cancel their own visits
         if update_data.status != "cancelled":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Adopters can only cancel their visit schedules"
+                detail="Visitors can only cancel their scheduled visits"
             )
     else:
-        # For shelter/individual users, check if they own the pet
-        pet = await PetService.get_pet_by_id(visit.pet_id)
-        if not pet or pet.owner_id != current_user["user_id"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to update this visit schedule"
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this visit schedule"
+        )
     
     # Update the visit schedule
     updated_visit = await VisitService.update_visit_status(visit_id, update_data)
@@ -233,10 +237,9 @@ async def delete_visit_schedule(
 ) -> Dict[str, str]:
     """
     Delete a visit schedule.
-    
-    Adopters can delete their own visit schedules.
-    Pet owners can delete visit schedules for their pets.
-    Admins can delete any visit schedule.
+    Users can only delete:
+    - Visits they scheduled
+    - Visits for pets they own
     
     Args:
         visit_id: ID of the visit schedule to delete
@@ -244,9 +247,6 @@ async def delete_visit_schedule(
         
     Returns:
         Dict: Success message
-        
-    Raises:
-        HTTPException: If deletion fails or user doesn't have permission
     """
     # Get the visit schedule to check permissions
     visit = await VisitService.get_visit_by_id(visit_id)
@@ -257,12 +257,8 @@ async def delete_visit_schedule(
         )
     
     # Check if user has permission to delete this visit schedule
-    if current_user["role"] == UserRole.ADMIN:
-        pass  # Admins can delete any visit schedule
-    elif current_user["role"] == UserRole.ADOPTER and current_user["user_id"] == visit.adopter_id:
-        pass  # Adopters can delete their own visit schedules
-    else:
-        # For shelter/individual users, check if they own the pet
+    if current_user["user_id"] != visit.adopter_id:
+        # If user is not the visitor, check if they own the pet
         pet = await PetService.get_pet_by_id(visit.pet_id)
         if not pet or pet.owner_id != current_user["user_id"]:
             raise HTTPException(

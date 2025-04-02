@@ -1,13 +1,12 @@
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 from app.core.config import get_settings
 from app.db.supabase_client import supabase_manager
-from app.models.user import User, UserRole
+from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, TokenData
 
 settings = get_settings()
-
 
 class AuthService:
     """Service for handling authentication operations."""
@@ -30,7 +29,6 @@ class AuthService:
             # Prepare user metadata
             user_metadata = {
                 "username": user_data.username,
-                "role": user_data.role,
                 "full_name": user_data.full_name,
                 "phone_number": user_data.phone_number,
                 "address": user_data.address,
