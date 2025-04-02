@@ -202,7 +202,7 @@ The API follows RESTful design principles and is grouped by functionality.
 ### Pet Management
 
 - **POST /api/pets**  
-  *Creates a new pet listing (shelters or individual users).*  
+  *Creates a new pet listing. Requires authentication.*  
   **Request Body:**  
   ```json
   {
@@ -212,9 +212,8 @@ The API follows RESTful design principles and is grouped by functionality.
     "age": 3,
     "gender": "Male",
     "description": "Friendly and energetic.",
-    "image_url": "http://example.com/buddy.jpg",
-    "owner_id": 10,
-    "owner_type": "individual"  // or "shelter"
+    "image_url": "http://example.com/buddy.jpg"
+    // owner_id is automatically set based on authenticated user
   }
   ```  
   **Response:**  
@@ -222,40 +221,40 @@ The API follows RESTful design principles and is grouped by functionality.
   - `400 Bad Request`/`401 Unauthorized`: On error.
 
 - **GET /api/pets**  
-  *Retrieves all pet listings with optional filters (by type, breed, age, location etc.).*  
+  *Retrieves all pet listings with optional filters (by type, breed, age, location etc.). Publicly accessible.*  
   **Query Parameters:** e.g. `pet_type`, `breed`, `status`  
   **Response:**  
   - `200 OK`: List of pets.
 
 - **GET /api/pets/{pet_id}**  
-  *Retrieves details of a specific pet listing.*  
+  *Retrieves details of a specific pet listing. Publicly accessible.*  
   **Response:**  
   - `200 OK`: Returns pet details.
   - `404 Not Found`: Pet not found.
 
 - **PUT /api/pets/{pet_id}**  
-  *Updates a specific pet listing (only allowed by the owner or an admin).*  
+  *Updates a specific pet listing (only allowed by the owner). Requires authentication.*  
   **Request Body:** (fields to update)  
   **Response:**  
   - `200 OK`: Updated.
-  - `400 Bad Request`/`401 Unauthorized`/`404 Not Found`: On error.
+  - `400 Bad Request`/`401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 - **DELETE /api/pets/{pet_id}**  
-  *Deletes a pet listing (only allowed by the owner or an admin).*  
+  *Deletes a pet listing (only allowed by the owner). Requires authentication.*  
   **Response:**  
   - `200 OK`: Listing deleted.
-  - `401 Unauthorized`/`404 Not Found`: On error.
+  - `401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 ### Adoption Application Management
 
 - **POST /api/adoptions**  
-  *Submits a new adoption application for a pet.*  
+  *Submits a new adoption application for a pet. Requires authentication.*  
   **Request Body:**  
   ```json
   {
     "pet_id": 15,
-    "adopter_id": 10,
     "message": "I would love to provide a loving home."
+    // adopter_id is automatically set based on authenticated user
   }
   ```  
   **Response:**  
@@ -263,18 +262,18 @@ The API follows RESTful design principles and is grouped by functionality.
   - `400 Bad Request`/`401 Unauthorized`: On error.
 
 - **GET /api/adoptions**  
-  *Retrieves all adoption applications for the authenticated user (adopters view their submissions; shelter/individual owners view applications for their pets).*  
+  *Retrieves adoption applications for the authenticated user (users view their submissions; pet owners view applications for their pets). Requires authentication.*  
   **Response:**  
   - `200 OK`: List of applications.
 
 - **GET /api/adoptions/{application_id}**  
-  *Retrieves details of a specific adoption application.*  
+  *Retrieves details of a specific adoption application. Requires authentication and ownership.*  
   **Response:**  
   - `200 OK`: Application details.
-  - `404 Not Found`: Application not found.
+  - `401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 - **PUT /api/adoptions/{application_id}**  
-  *Updates the status of an adoption application (e.g. approved, rejected), allowed for shelter representatives or the pet owner.*  
+  *Updates the status of an adoption application (e.g. approved, rejected), allowed for the pet owner. Requires authentication.*  
   **Request Body:**  
   ```json
   {
@@ -283,7 +282,7 @@ The API follows RESTful design principles and is grouped by functionality.
   ```  
   **Response:**  
   - `200 OK`: Application updated.
-  - `400 Bad Request`/`404 Not Found`: On error.
+  - `400 Bad Request`/`401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 ### Success Stories Management
 
@@ -369,14 +368,14 @@ The API follows RESTful design principles and is grouped by functionality.
 ### Visit Scheduling Management
 
 - **POST /api/visits**  
-  *Schedules a visit for a pet, enabling adopters to request a meeting.*  
+  *Schedules a visit for a pet. Requires authentication.*  
   **Request Body:**  
   ```json
   {
     "pet_id": 15,
-    "adopter_id": 10,
     "scheduled_date": "2025-04-10T14:00:00Z",
     "message": "I would like to meet Buddy to see if we're a good match."
+    // adopter_id is automatically set based on authenticated user
   }
   ```  
   **Response:**  
@@ -384,40 +383,40 @@ The API follows RESTful design principles and is grouped by functionality.
   - `400 Bad Request`/`401 Unauthorized`: On error.
 
 - **GET /api/visits**  
-  *Retrieves visit schedules for the authenticated user. For pet owners, this lists requests for their pets; for adopters, it shows their scheduled visits.*  
+  *Retrieves visit schedules for the authenticated user (users view their schedules; pet owners view schedules for their pets). Requires authentication.*  
   **Response:**  
   - `200 OK`: List of scheduled visits.
 
 - **GET /api/visits/{visit_id}**  
-  *Retrieves details for a specific scheduled visit.*  
+  *Retrieves details for a specific scheduled visit. Requires authentication and ownership.*  
   **Response:**  
   - `200 OK`: Visit details.
-  - `404 Not Found`: Not found.
+  - `401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 - **PUT /api/visits/{visit_id}**  
-  *Updates the status of a visit (e.g. confirming, completing, or cancelling a visit), allowed by the pet owner or admin.*  
+  *Updates the status of a visit (e.g. confirming, completing, or cancelling a visit), allowed by the pet owner or the user who scheduled it. Requires authentication.*  
   **Request Body:**  
   ```json
   {
-    "status": "confirmed"
+    "status": "confirmed" // or "cancelled" by adopter
   }
   ```  
   **Response:**  
   - `200 OK`: Visit updated.
-  - `400/404`: On error.
+  - `400 Bad Request`/`401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 - **DELETE /api/visits/{visit_id}**  
-  *Cancels a scheduled visit (by the adopter or pet owner).*  
+  *Cancels a scheduled visit (by the user who scheduled it or the pet owner). Requires authentication.*  
   **Response:**  
   - `200 OK`: Visit cancelled.
-  - `401/404`: On error.
+  - `401 Unauthorized`/`403 Forbidden`/`404 Not Found`: On error.
 
 ---
 
 ## Additional Considerations
 
-- **Role-Based Access Control:**  
-  Ensure endpoints are protected so that only authorised roles can perform specific actions (e.g. only a pet’s owner or an admin can update or delete its listing).
+- **Authentication:**  
+  Endpoints requiring user context rely on JWT authentication. Ensure tokens are passed in the `Authorization: Bearer <token>` header.
 
 - **Data Validation & Error Handling:**  
   All endpoints should include robust validation and return clear error messages to assist in troubleshooting.
@@ -431,8 +430,6 @@ The API follows RESTful design principles and is grouped by functionality.
 ---
 
 This full design provides a robust backend API framework that supports:
-- Tracking who posts each pet (shelter vs individual).
+- Tracking who posts each pet.
 - Managing pet details, adoption applications, success stories, and resources.
 - Allowing potential adopters to schedule visits, ensuring a seamless interaction between all stakeholders.
-
-This comprehensive approach will enable your Pet Adoption Network to deliver a secure, scalable, and user-friendly service for both adopters and pet owners.
