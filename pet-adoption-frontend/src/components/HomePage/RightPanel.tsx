@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-
-import logo from '@/resources/pawsitive_logo.png'
+import logo from "@/resources/logo1.png"; // Placeholder image
 
 export default function Rightpanel() {
-  // Sample Pet Data (For demo purposes)
   const [selectedPet, setSelectedPet] = useState({
     name: "Buddy",
     type: "Dog",
@@ -15,14 +13,15 @@ export default function Rightpanel() {
     size: "Medium",
     location: "New York, NY",
     adoptionStatus: "Available",
-    image: logo , // Replace with actual pet image
+    image: logo, // Placeholder image
     description:
       "Buddy is a friendly and energetic Golden Retriever who loves playing fetch and cuddles. He is looking for a loving home!",
   });
 
   return (
-    <aside className="bg-white shadow-md rounded-xl p-4 hidden sm:block w-full max-w-[250px]">
-      <h2 className="text-xl font-semibold text-gray-800 mb-2">Pet Details</h2>
+    <aside className="bg-white shadow-md rounded-xl p-4 w-full max-w-[250px] 
+                     sticky top-20 max-h-[80vh] overflow-y-auto">
+      <h2 className="text-lg font-semibold text-gray-800 mb-2">Pet Details</h2>
 
       {/* Pet Image */}
       <div className="w-full flex justify-center">
