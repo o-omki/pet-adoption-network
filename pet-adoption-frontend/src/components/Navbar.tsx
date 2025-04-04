@@ -36,7 +36,7 @@ const Navbar = () => {
           <li><Link href="#">Blog</Link></li>
           <li><Link href="#">Foods</Link></li>
           <li><Link href="#">List Your Pet</Link></li>
-          <li><Link href="#">Login</Link></li>
+          <li><Link href="/login">Login</Link></li>
         </ul>
 
         {/* Mobile Menu Button */}
@@ -54,7 +54,7 @@ const Navbar = () => {
           <li><Link href="#">Blog</Link></li>
           <li><Link href="#">Foods</Link></li>
           <li><Link href="#">List Your Pet</Link></li>
-          <li><Link href="#">Login</Link></li>
+          <li><Link href="/Login">Login</Link></li>
         </ul>
       )}
     </nav>
