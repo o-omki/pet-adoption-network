@@ -1,0 +1,2 @@
+You have to build this rest api backend for a project. I've given the instructions in #file:instructions.md file. This is a casual project for demo and would be disposed off later. Just build a working rest api that can be deployed as a docker container. Start with the authetication part. 
+Use Supabase as DB for the whole project
