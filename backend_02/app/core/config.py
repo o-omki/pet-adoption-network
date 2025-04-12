@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str
     
     class Config:
-        env_file = ".env"
+        # env_file = ".env"  # Uncomment this line to load environment variables from a .env file during local deployment
         case_sensitive = True
 
 
