@@ -37,7 +37,7 @@ export default function Register() {
               {...register("name", { required: "Name is required" })}
               className="w-full px-5 py-3 border rounded-2xl text-lg focus:ring-2 focus:ring-purple-500 shadow-sm"
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+            {errors.name && <p className="text-red-500 text-sm mt-1"></p>}
           </div>
 
           {/* Email Input */}
@@ -48,7 +48,7 @@ export default function Register() {
               {...register("email", { required: "Email is required" })}
               className="w-full px-5 py-3 border rounded-2xl text-lg focus:ring-2 focus:ring-purple-500 shadow-sm"
             />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
+            {errors.email && <p className="text-red-500 text-sm mt-1"></p>}
           </div>
 
           {/* Password Input */}
@@ -59,7 +59,7 @@ export default function Register() {
               {...register("password", { required: "Password is required", minLength: { value: 6, message: "Password must be at least 6 characters" } })}
               className="w-full px-5 py-3 border rounded-2xl text-lg focus:ring-2 focus:ring-purple-500 shadow-sm"
             />
-            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
+            {errors.password && <p className="text-red-500 text-sm mt-1"></p>}
           </div>
 
           {/* Submit Button */}
