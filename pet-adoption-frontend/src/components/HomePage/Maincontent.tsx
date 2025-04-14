@@ -19,7 +19,6 @@ export default function MainContent() {
 
   // Filter pets based on type
   const filteredPets = selectedFilter === "All" ? pets : pets.filter(pet => pet.type === selectedFilter);
-
   return (
     <div className="flex flex-col mt-15 items-center sm:items-start w-full">
       {/* Main Intro Section */}

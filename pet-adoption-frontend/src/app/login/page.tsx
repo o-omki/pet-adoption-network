@@ -3,7 +3,9 @@ import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "@/resources/logo.png"; // Update with correct path
+import logo from "@/resources/logo.png";
+import { useState } from "react";
+import config from "@/resources/config"; 
 
 export default function Login() {
   const {
@@ -12,9 +14,44 @@ export default function Login() {
     formState: { errors },
   } = useForm();
 
-  const onSubmit = (data: any) => {
-    console.log("Login Data:", data);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onSubmit = async (data: any) => {
+    setLoading(true);
+    setErrorMessage("");
+  
+    try {
+      const formData = new FormData();
+      formData.append("username", data.username);
+      formData.append("password", data.password);
+  console.log(config.BASE_URL);
+      const response = await fetch(`${config.BASE_URL}/api/v1/auth/login`, {
+        method: "POST",
+        body: formData,
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.message || "Login failed");
+      }
+  
+      // ✅ Store the access_token only in localStorage
+      localStorage.setItem("access_token", result.access_token);
+  
+      // Optionally: redirect user
+      window.location.href = "/";
+  
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      setErrorMessage(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   return (
     <motion.div
@@ -34,17 +71,22 @@ export default function Login() {
           Welcome Back! 🐾
         </h2>
 
+        {/* Error Message */}
+        {errorMessage && (
+          <p className="text-red-500 text-center mb-4">{errorMessage}</p>
+        )}
+
         {/* Login Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Email Input */}
+          {/* Username Input */}
           <div>
-            <label className="block text-gray-700 font-medium text-lg">Email</label>
+            <label className="block text-gray-700 font-medium text-lg">Username</label>
             <input
-              type="email"
-              {...register("email", { required: "Email is required" })}
+              type="text"
+              {...register("username", { required: "Username is required" })}
               className="w-full px-5 py-3 border rounded-2xl text-lg focus:ring-2 focus:ring-purple-500 shadow-sm"
             />
-            {errors.email && <p className="text-red-500 text-sm"></p>}
+            {errors.username && <p className="text-red-500 text-sm"></p>}
           </div>
 
           {/* Password Input */}
@@ -59,8 +101,12 @@ export default function Login() {
           </div>
 
           {/* Submit Button */}
-          <button type="submit" className="w-full bg-purple-600 text-white py-4 rounded-2xl text-xl font-semibold hover:bg-purple-700 transition">
-            Login
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-purple-600 text-white py-4 rounded-2xl text-xl font-semibold hover:bg-purple-700 transition"
+          >
+            {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
