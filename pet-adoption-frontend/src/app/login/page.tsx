@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 "use client";
 import { useForm } from "react-hook-form";
 import { motion } from "framer-motion";

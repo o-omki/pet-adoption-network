@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Filter, ChevronDown, ChevronUp, PawPrint, Home, MapPin, Ruler, Baby, Users } from "lucide-react";
+import { Filter, ChevronDown, ChevronUp, PawPrint, Baby } from "lucide-react";
 
 export default function Leftpanel() {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     type: false,
     age: false,
-    size: false,
-    adoption: false,
-    location: false,
   });
 
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
@@ -20,31 +17,13 @@ export default function Leftpanel() {
       category: "Animal Type",
       id: "type",
       icon: <PawPrint className="w-5 h-5" />,
-      subFilters: ["Dogs", "Cats", "Birds", "Fish", "Reptiles", "Small Pets"],
+      subFilters: ["Dogs", "Cats"],
     },
     {
       category: "Age",
       id: "age",
       icon: <Baby className="w-5 h-5" />,
-      subFilters: ["Baby", "Adult", "Senior"],
-    },
-    {
-      category: "Size",
-      id: "size",
-      icon: <Ruler className="w-5 h-5" />,
-      subFilters: ["Small", "Medium", "Large"],
-    },
-    {
-      category: "Adoption Type",
-      id: "adoption",
-      icon: <Home className="w-5 h-5" />,
-      subFilters: ["Foster", "Permanent Adoption"],
-    },
-    {
-      category: "Location",
-      id: "location",
-      icon: <MapPin className="w-5 h-5" />,
-      subFilters: ["Nearby", "City-Based"],
+      subFilters: ["1yrs", "2yrs", "3yrs", "4yrs", "5yrs"],
     },
   ];
 

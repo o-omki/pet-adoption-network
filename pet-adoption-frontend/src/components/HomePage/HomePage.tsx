@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import MainContent from "./Maincontent";
 import Leftpanel from "./LeftPanel";
 import Rightpanel from "./RightPanel";
@@ -9,7 +10,7 @@ export default function Homepage() {
       
       {/* Fixed Search Panel */}
       <div >
-        <Searchbar />
+        {/* <Searchbar /> */}
       </div>
 
       {/* Main Page Layout (Scrolls Below) */}

@@ -30,12 +30,12 @@ const Navbar = () => {
 
         {/* Desktop Menu */}
         <ul className="hidden md:flex space-x-4 text-sm font-medium">
-          <li><Link href="#">Pets</Link></li>
+          {/* <li><Link href="#">Pets</Link></li>
           <li><Link href="#">Pet Services</Link></li>
           <li><Link href="#">Breeds</Link></li>
           <li><Link href="#">Blog</Link></li>
           <li><Link href="#">Foods</Link></li>
-          <li><Link href="#">List Your Pet</Link></li>
+          <li><Link href="#">List Your Pet</Link></li> */}
           <li><Link href="/login">Login</Link></li>
         </ul>
 
@@ -48,12 +48,12 @@ const Navbar = () => {
       {/* Mobile Menu */}
       {isOpen && (
         <ul className="md:hidden bg-white text-purple-600 font-medium text-sm flex flex-col items-center py-3 space-y-3">
-          <li><Link href="#">Pets</Link></li>
+          {/* <li><Link href="#">Pets</Link></li>
           <li><Link href="#">Pet Services</Link></li>
           <li><Link href="#">Breeds</Link></li>
           <li><Link href="#">Blog</Link></li>
           <li><Link href="#">Foods</Link></li>
-          <li><Link href="#">List Your Pet</Link></li>
+          <li><Link href="#">List Your Pet</Link></li> */}
           <li><Link href="/Login">Login</Link></li>
         </ul>
       )}
