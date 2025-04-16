@@ -14,12 +14,12 @@ export default function Homepage() {
       </div>
 
       {/* Main Page Layout (Scrolls Below) */}
-      <div className="grid grid-cols-[15%_65%_20%] gap-4 mt-20">
+      <div className="grid grid-cols-[80%_20%] gap-4 mt-20">
         
-        {/* Left Sidebar */}
+        {/* Left Sidebar
         <div>
           <Leftpanel />
-        </div>
+        </div> */}
 
         {/* Main Content */}
         <MainContent />
