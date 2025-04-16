@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Any
 
-from app.core.database import supabase
+from app.core.database import supabase_client
 from app.schemas.adoption import AdoptionApplicationCreate, AdoptionApplicationUpdate, AdoptionStatus
 from app.services.pet_service import PetService
 
@@ -27,13 +27,13 @@ class AdoptionService:
         application_dict["adopter_id"] = adopter_id
         application_dict["status"] = AdoptionStatus.SUBMITTED
         
-        result = supabase.table("adoption_applications").insert(application_dict).execute()
+        result = supabase_client.table("adoption_applications").insert(application_dict).execute()
         
         if not result.data:
             raise ValueError("Failed to create adoption application")
         
         # Update pet status to pending
-        supabase.table("pets").update({"status": "pending"}).eq("pet_id", application_data.pet_id).execute()
+        supabase_client.table("pets").update({"status": "pending"}).eq("pet_id", application_data.pet_id).execute()
         
         return result.data[0]
     
@@ -48,19 +48,19 @@ class AdoptionService:
         Returns:
             Application data or None if not found.
         """
-        result = supabase.table("adoption_applications").select("*").eq("application_id", application_id).execute()
+        result = supabase_client.table("adoption_applications").select("*").eq("application_id", application_id).execute()
         if not result.data:
             return None
             
         application = result.data[0]
         
         # Get pet name
-        pet_result = supabase.table("pets").select("name").eq("pet_id", application["pet_id"]).execute()
+        pet_result = supabase_client.table("pets").select("name").eq("pet_id", application["pet_id"]).execute()
         if pet_result.data:
             application["pet_name"] = pet_result.data[0]["name"]
         
         # Get adopter name
-        adopter_result = supabase.table("users").select("username").eq("user_id", application["adopter_id"]).execute()
+        adopter_result = supabase_client.table("users").select("username").eq("user_id", application["adopter_id"]).execute()
         if adopter_result.data:
             application["adopter_name"] = adopter_result.data[0]["username"]
             
@@ -77,7 +77,7 @@ class AdoptionService:
         Returns:
             List of adoption applications for the adopter.
         """
-        result = supabase.table("adoption_applications").select("*").eq("adopter_id", adopter_id).execute()
+        result = supabase_client.table("adoption_applications").select("*").eq("adopter_id", adopter_id).execute()
         
         if not result.data:
             return []
@@ -86,7 +86,7 @@ class AdoptionService:
         
         # Get pet names
         pet_ids = [app["pet_id"] for app in applications]
-        pets_result = supabase.table("pets").select("pet_id, name").in_("pet_id", pet_ids).execute()
+        pets_result = supabase_client.table("pets").select("pet_id, name").in_("pet_id", pet_ids).execute()
         
         pet_names = {}
         if pets_result.data:
@@ -111,7 +111,7 @@ class AdoptionService:
             List of adoption applications for the owner's pets.
         """
         # First, get all pets owned by this user
-        pets_result = supabase.table("pets").select("pet_id").eq("owner_id", owner_id).execute()
+        pets_result = supabase_client.table("pets").select("pet_id").eq("owner_id", owner_id).execute()
         
         if not pets_result.data:
             return []
@@ -119,7 +119,7 @@ class AdoptionService:
         pet_ids = [pet["pet_id"] for pet in pets_result.data]
         
         # Get all applications for these pets
-        applications_result = supabase.table("adoption_applications").select("*").in_("pet_id", pet_ids).execute()
+        applications_result = supabase_client.table("adoption_applications").select("*").in_("pet_id", pet_ids).execute()
         
         if not applications_result.data:
             return []
@@ -127,7 +127,7 @@ class AdoptionService:
         applications = applications_result.data
         
         # Get pet names
-        pets_result = supabase.table("pets").select("pet_id, name").in_("pet_id", pet_ids).execute()
+        pets_result = supabase_client.table("pets").select("pet_id, name").in_("pet_id", pet_ids).execute()
         
         pet_names = {}
         if pets_result.data:
@@ -135,7 +135,7 @@ class AdoptionService:
         
         # Get adopter names
         adopter_ids = [app["adopter_id"] for app in applications]
-        adopters_result = supabase.table("users").select("user_id, username").in_("user_id", adopter_ids).execute()
+        adopters_result = supabase_client.table("users").select("user_id, username").in_("user_id", adopter_ids).execute()
         
         adopter_names = {}
         if adopters_result.data:
@@ -161,7 +161,7 @@ class AdoptionService:
             The updated application data.
         """
         # Get the application to verify it exists
-        application_result = supabase.table("adoption_applications").select("*").eq("application_id", application_id).execute()
+        application_result = supabase_client.table("adoption_applications").select("*").eq("application_id", application_id).execute()
         
         if not application_result.data:
             raise ValueError("Adoption application not found")
@@ -170,17 +170,17 @@ class AdoptionService:
         
         # Update the application status
         update_data = {"status": status_update.status}
-        result = supabase.table("adoption_applications").update(update_data).eq("application_id", application_id).execute()
+        result = supabase_client.table("adoption_applications").update(update_data).eq("application_id", application_id).execute()
         
         if not result.data:
             raise ValueError("Failed to update application status")
         
         # If approved, update pet status to adopted
         if status_update.status == AdoptionStatus.APPROVED:
-            supabase.table("pets").update({"status": "adopted"}).eq("pet_id", application["pet_id"]).execute()
+            supabase_client.table("pets").update({"status": "adopted"}).eq("pet_id", application["pet_id"]).execute()
             
             # Reject all other applications for this pet
-            supabase.table("adoption_applications").update({"status": "rejected"}) \
+            supabase_client.table("adoption_applications").update({"status": "rejected"}) \
                 .eq("pet_id", application["pet_id"]) \
                 .neq("application_id", application_id) \
                 .execute()
@@ -200,7 +200,7 @@ class AdoptionService:
             True if the user is the pet owner, False otherwise.
         """
         # Get the application
-        application_result = supabase.table("adoption_applications").select("pet_id").eq("application_id", application_id).execute()
+        application_result = supabase_client.table("adoption_applications").select("pet_id").eq("application_id", application_id).execute()
         
         if not application_result.data:
             return False
