@@ -28,7 +28,6 @@ class SuccessStoryService:
         Get all success stories
         """
         response = supabase_client.table("success_stories").select("*").order("published_at", desc=True).execute()
-        print(response.data)
         return response.data
 
     @staticmethod
