@@ -2,29 +2,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import config from "@/resources/config"; // BASE_URL
-import logo from "@/resources/logo1.png"; // Fallback image
+import config from "@/resources/config";
+import logo from "@/resources/logo1.png";
 import Link from "next/link";
 
 export default function MainContent() {
-  // useEffect(() => {
-  //   const token = localStorage.getItem("access_token");
-  //   console.log("Access Token:", token);
-  // }, []);
   const [pets, setPets] = useState<any[]>([]);
   const [selectedFilter, setSelectedFilter] = useState("All");
 
-  // Fetch pets on load
   useEffect(() => {
     const fetchPets = async () => {
       try {
         const response = await fetch(`${config.BASE_URL}/api/v1/pets`);
         const data = await response.json();
 
-        // ✅ Filter only Dog and Cat
         const filtered = data.filter(
-          (pet: any) =>
-            pet.pet_type_name === "Dog" || pet.pet_type_name === "Cat"
+          (pet: any) => pet.pet_type_name === "Dog" || pet.pet_type_name === "Cat"
         );
 
         setPets(filtered);
@@ -36,7 +29,6 @@ export default function MainContent() {
     fetchPets();
   }, []);
 
-  // Filter pets based on selected type
   const filteredPets =
     selectedFilter === "All"
       ? pets
@@ -80,28 +72,30 @@ export default function MainContent() {
         {filteredPets.map((pet) => {
           const imagePath =
             pet.breed_id != null
-              ? `/pet_images/${pet.pet_id}.jpg` // adjust extension if needed
+              ? `/pet_images/${pet.pet_id}.jpg`
               : logo.src;
 
           return (
             <div
               key={pet.pet_id}
-              className="bg-white shadow-lg rounded-lg p-4 flex flex-col items-center text-center"
+              className="bg-white shadow-lg rounded-lg p-6 flex flex-col items-center text-center"
             >
-              {/* Pet Image - Using <img> instead of <Image> */}
-              <img
-                src={imagePath}
-                alt={pet.name}
-                width={120}
-                height={120}
-                className="rounded-md object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = logo.src;
-                }}
-              />
+              {/* Larger Pet Image with Wrapper */}
+              <div className="w-full flex justify-center mb-4">
+                <img
+                  src={imagePath}
+                  alt={pet.name}
+                  width={200}
+                  height={200}
+                  className="rounded-md object-cover max-h-[200px] w-auto"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = logo.src;
+                  }}
+                />
+              </div>
 
               {/* Pet Info */}
-              <h3 className="text-lg font-semibold mt-2">{pet.name}</h3>
+              <h3 className="text-lg font-semibold">{pet.name}</h3>
               <p className="text-gray-600 text-sm">
                 {pet.pet_type_name} - {pet.age} years
               </p>
